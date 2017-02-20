@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+</head>
+<body>
+	<textarea name="" id="content" cols="30" rows="10" ></textarea>
+	<input id="write" type="text" placeholder="please write content here">
+	<input id="send" type="button" value="send" />
+	<input type="text" id="user" placeholder="user">
+	<select style="width: 100px;" size="2" name="" id="userList">
+		<option value="all">群聊</option>
+	</select>
+	<script src="./socket.io/socket.io.js"></script>
+	<script>
+		let send = document.getElementById("send");
+		let write = document.getElementById("write");
+		let content = document.getElementById("content");
+		let user = document.getElementById("user");
+		//用户列表
+		let userList = document.getElementById("userList");
+		let socket = io.connect();
+		//判断用户名是否为空
+		let isUserEmpty = () => {
+			if(user.value == ""){
+				alert("请填写用户名");
+				return false;
+			}
+			else {
+				return true;
+			}
+		}
+		//监听用户名变化
+		let oldUser;
+		user.onblur = () => {
+			if(isUserEmpty()){
+				//防止重复发射
+				if(oldUser == user.value){return;}
+				oldUser = user.value;
+				socket.emit("getUser",user.value);
+			}
+		}       
+		//发送消息
+		send.onclick = () => {
+			if(isUserEmpty()){
+				let msg = write.value;
+				// content.innerHTML = content.value + msg + "\n";
+				socket.send({msg:msg,person:userList.value});
+			}
+			if(select.value == ""){
+				alert("请选择一个聊天对象");
+			}
+		};
+		//接收到消息
+		socket.on("message",msg => {
+			console.log("从服务器接收到的消息 ： " + msg);
+			//更新内容
+			content.innerHTML = content.value + msg + "\n";
+		});
+		socket.on("disconnect",() => {
+			console.log("与服务器断开连接");
+		});
+		//新用户加入聊天室
+		socket.on("newUser",arr => {
+			userList.innerHTML = "";
+			let all = document.createElement("option");
+			all.innerHTML = "群聊";
+			all.setAttribute("value","all");
+			userList.appendChild(all);
+			//添加新用户
+			arr.forEach((value,index) => {
+				console.log("value :" + value + "index :" + index);
+				let option = document.createElement("option");
+				option.innerHTML = value;
+				option.setAttribute("value",value);
+				userList.appendChild(option);
+				userList.setAttribute("size",userList.children.length);
+			});
+			//默认选中群聊
+			userList.value = "all";
+		});
+		//接收服务器需要弹出对话框的需求
+		socket.on("showDialog",msg => {
+			alert(msg);
+		});
+	</script>
+</body>
+</html>
